@@ -26,25 +26,31 @@ pipeline {
                 script {
                     sh("ls ./app/frontend")
                 }
+                stash includes: 'app/frontend/dist/**/*', name: 'builtSourceFrontEnd'
+                stash includes: 'app/server/dist/**/*', name: 'builtSourceServer'
                 echo "done build"
             }
         }
         stage('Containerise') {
             steps {
                 echo "start containerise"
+                dir('.'){
+                    unstash 'builtSourceFrontEnd'
+                    unstash 'builtSourceServer'
+                }
                 script {
-                    sh("ls ./app/frontend")
+                    sh("ls -R ./app/frontend/dist")
                     dockerBuild.build(env.APP_NAME)
                 }
                 echo "done containerise"
             }
         }
-        stage('Push') {
-            steps {
-                script {
-                    dockerBuild.push(env.APP_NAME)
-                }
-            }
-        }
+        // stage('Push') {
+        //     steps {
+        //         script {
+        //             dockerBuild.push(env.APP_NAME)
+        //         }
+        //     }
+        // }
     }
 }
