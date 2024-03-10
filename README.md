@@ -27,7 +27,7 @@ This game consists of two parts.
 
 ## Build image with docker
 
-`commit=$(git rev-parse HEAD) serviceName="tic-tac-toe" docker-compose build`
+`commit=$(git rev-parse HEAD) serviceName="tic-tac-toe" docker compose build`
 
 Push to registry
 `docker image push <repository>:<tag>`
