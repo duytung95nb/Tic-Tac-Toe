@@ -21,14 +21,22 @@ pipeline {
                 }
             }
             steps {
+                echo "start build"
                 sh 'yarn && yarn build'
+                script {
+                    sh("ls ./app/frontend")
+                }
+                echo "done build"
             }
         }
         stage('Containerise') {
             steps {
+                echo "start containerise"
                 script {
+                    sh("ls ./app/frontend")
                     dockerBuild.build(env.APP_NAME)
                 }
+                echo "done containerise"
             }
         }
         stage('Push') {
