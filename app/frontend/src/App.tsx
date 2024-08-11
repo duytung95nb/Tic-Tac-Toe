@@ -1,70 +1,53 @@
-import React, { useContext, useEffect, useState } from "react";
 import "./App.scss";
-import GlobalStateContext, {
-  globalState,
-} from "./components/GlobalStateContext";
-import PlayScreen from "./components/PlayScreen";
-import SplashScreen from "./components/SplashScreen";
+import { RoomConnection } from "./views/components/roomConnection/RoomConnection";
+import { getKeyCloak, useAuthentication } from "./domain/auth/keycloak";
+import Button from "./views/components/Button";
+import { useEffect, useState } from "react";
+import { KeycloakProfile } from "keycloak-js";
 
 function App() {
-  const { socket } = useContext(GlobalStateContext);
-  const [isPlayerOne, setIsPlayerOne] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [connection, setConnection] = useState("");
-  const [isInRoom, setIsInRoom] = useState(false);
-  const [roomId, setRoomId] = useState("");
-  const [playerNumberFn, setPlayerNumberFn] = useState(() => () => 0);
-  const joinRoom = (data: any) => {
-    const connection = data.target.value;
-    console.log("Check connection: ", connection);
-    socket.emit("check-connection", connection);
-  };
-  useEffect(() => {
-    function checkForConnection(connectionId: string) {
-      console.log("Connection exist " + connectionId);
-      if (!connectionId || connectionId === connection) {
-        return;
-      }
-      setConnection(connectionId);
-      setIsInRoom(true);
-      console.log("Adding player to room", {
-        nextPlayerId: connection,
-        roomId,
-      });
-      socket.emit("add-player-to-room", { nextPlayerId: connectionId, roomId });
-    }
-    socket.on("connection-status", checkForConnection);
-  }, [connection]);
-  useEffect(() => {
-    socket.on("connect", () => {
-      console.log("Connected socket with id", socket.id);
-      setConnected(true);
-      socket.on("added-to-room", (roomId, playerNumber) => {
-        console.log("Added to room");
-        setIsInRoom(true);
-        setRoomId(roomId);
-        setPlayerNumberFn(() => () => playerNumber);
-      });
-      socket.on("removed-from-room", () => {
-        setIsInRoom(false);
-      });
-    });
-  }, [connected]);
-  return (
-    <GlobalStateContext.Provider
-      value={{
-        ...globalState,
-        isPlayerOne,
-        setIsPlayerOne,
-        getPlayerNumber: playerNumberFn,
-      }}
-    >
-      <div id="app">
-        {!isInRoom && <SplashScreen joinRoom={joinRoom} />}
-        {isInRoom && <PlayScreen />}
-      </div>
-    </GlobalStateContext.Provider>
+  const authenticated = useAuthentication();
+  const keycloak = getKeyCloak();
+  const [userProfile, setUserProfile] = useState<KeycloakProfile | undefined>(
+    keycloak.profile
   );
+  useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
+    (async () => {
+      try {
+        const profile = await keycloak.loadUserProfile();
+        setUserProfile(profile);
+        console.log("Loading user profile success");
+      } catch (e) {
+        console.error("Loading user profile failed", e);
+      }
+    })();
+  }, [authenticated]);
+  const onLoginClicked = async () => {
+    try {
+      await keycloak.login();
+      console.log("Login success");
+    } catch (e) {
+      console.error("Login fail", e);
+    }
+  };
+  if (authenticated) {
+    return (
+      <>
+        <div>Username: {userProfile?.username}</div>
+        <RoomConnection />
+      </>
+    );
+  } else {
+    return (
+      <>
+        Need login
+        <Button text="Login" onClick={onLoginClicked} />
+      </>
+    );
+  }
 }
 
-export default App;
+export { App };
